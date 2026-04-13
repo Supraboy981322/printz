@@ -4,8 +4,17 @@ const hlp = @import("helpers.zig");
 const stderr = &@constCast(&std.fs.File.stderr().writer(&.{})).interface;
 
 pub fn parse_octal(in:[]u8) u8 {
-    var v:u8 = 0;
+    var v:usize = 0;
     for (in) |b| {
+        defer if (v > std.math.maxInt(u8)) {
+            stderr.print(
+                "octal escape is too large to be a byte;\n"
+                    ++ "\t{d} doesn't fit within the range 0..{d}\n"
+                    ++ "\t\tthe max supported octal is 'o377'\n",
+                .{ v, std.math.maxInt(u8) }
+            ) catch {};
+            std.process.exit(1);
+        };
         if (b > '7' or b < '0') {
             stderr.print(
                 "invalid character in octal escape: {c}\n",
@@ -15,7 +24,7 @@ pub fn parse_octal(in:[]u8) u8 {
         v *= 8;
         v += b - '0';
     }
-    return v;
+    return @intCast(v);
 }
 
 pub fn parse_hex(in:[]u8) u8 {
