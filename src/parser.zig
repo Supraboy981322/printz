@@ -47,18 +47,17 @@ pub fn parse_hex(in:[]u8) u8 {
     return v;
 }
 
-pub fn parse_unicode(i:*usize, in:[]u8, alloc:std.mem.Allocator) []u8 {
+pub fn parse_unicode(i:*usize, in:[]u8, alloc:std.mem.Allocator) ![]u8 {
     var j:usize = 0;
     defer i.* += j;
     while (j < in.len) : (j += 1)
         if (in[j] == '}') break;
-
     if (j == in.len) j -= 1;
 
-    const zig_dumb = std.fmt.allocPrint(
-        alloc, "\"{s}\"", .{in[0..j+1]}
-    ) catch |e| @panic(@errorName(e));
-
+    var zig_dumb = try alloc.alloc(u8, j+3);
+    for (1..j+2) |k|
+        zig_dumb[k] = in[k-1];
+    zig_dumb[0], zig_dumb[j+2] = .{ '"', '"' };
     defer alloc.free(zig_dumb);
 
     return std.zig.string_literal.parseAlloc(alloc, zig_dumb) catch |e| {
@@ -143,7 +142,7 @@ pub fn parse_literal(alloc:std.mem.Allocator, in:[]u8) ![]u8 {
                 'u', 'U' => {
                     if (b == 'U') in[i] = 'u';
                     i -= 1;
-                    const foo = parse_unicode(&i, in[i..], alloc);
+                    const foo = try parse_unicode(&i, in[i..], alloc);
                     try arr.appendSlice(alloc, foo);
                     alloc.free(foo);
                     continue :loop;
