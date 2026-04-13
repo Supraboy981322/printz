@@ -42,6 +42,7 @@ pub fn main() !void {
 
     var res = try std.ArrayList(u8).initCapacity(alloc, 0);
     defer _ = res.deinit(alloc);
+
     var i:u3 = 0;
     const mem_len = comptime std.math.maxInt(@TypeOf(i));
     var mem:[mem_len]u8 = undefined;
@@ -57,7 +58,7 @@ pub fn main() !void {
             mem[@intCast(i-1)] = b;
             hlp.invalid_check(
                 @as(usize, @intCast(i)) + 1 > mem_len, "format string",
-                "unknown specifier: {s}", .{mem[0..i]}
+                "unknown specifier (truncated): {s}", .{mem[0..i]}
             );
             i += 1;
         } else {
@@ -72,7 +73,7 @@ pub fn main() !void {
             ) orelse {
                 hlp.invalid_check(
                     true, "format string",
-                    "unknown specifier: {s}", .{mem[0..i]}
+                    "unknown specifier: {{{s}}}", .{mem[0..i]}
                 );
                 unreachable;
             };
