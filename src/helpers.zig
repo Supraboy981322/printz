@@ -61,6 +61,7 @@ pub fn fmt_hex(
     msg:[]u8,
     opts:struct {
         caps:bool = false,
+        space:bool = false,
     }
 ) ![]u8 {
     var res = try std.ArrayList(u8).initCapacity(alloc, 0);
@@ -70,6 +71,10 @@ pub fn fmt_hex(
             try res.print(alloc, "{X}", .{b})
         else
             try res.print(alloc, "{x}", .{b});
+        if (opts.space)
+            try res.append(alloc, ' ');
     }
+    if (opts.space)
+        _ = res.pop();
     return res.toOwnedSlice(alloc);
 }
