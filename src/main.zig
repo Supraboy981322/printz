@@ -6,9 +6,10 @@ const stdout = &@constCast(&std.fs.File.stdout().writer(&.{})).interface;
 const stderr = &@constCast(&std.fs.File.stderr().writer(&.{})).interface;
 
 const FormatSpecifiers = enum {
-    @"s",
-    @"d",
-    @"c",
+    s,
+    d,
+    c,
+    x,
 };
 
 pub fn main() !void {
@@ -78,8 +79,8 @@ pub fn main() !void {
                 unreachable;
             };
             switch (specifier) {
-                .@"s" => try res.appendSlice(alloc, args[a_no]),
-                .@"c" => {
+                .s => try res.appendSlice(alloc, args[a_no]),
+                .c => {
                     hlp.invalid_check(
                         (args[a_no].len > 1 and !hlp.str_is_num(args[a_no])), "format string",
                         "more than one byte (can't use {{c}}): {s}", .{args[a_no]}
@@ -97,13 +98,18 @@ pub fn main() !void {
                     }
                     try res.print(alloc, "{c}", .{char});
                 },
-                .@"d" => {
+                .d => {
                     hlp.invalid_check(
                         (!hlp.str_is_num(args[a_no]) and args[a_no].len > 1), "format string",
                         "specified number, but provided arg isn't a number: {s}",
                         .{ args[a_no] }
                     );
                     try res.appendSlice(alloc, args[a_no]);
+                },
+                .x => {
+                    const formatted = try hlp.fmt_hex(alloc, args[a_no]);
+                    defer alloc.free(formatted);
+                    try res.appendSlice(alloc, formatted);
                 },
             }
             a_no += 1;
