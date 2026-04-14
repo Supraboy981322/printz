@@ -56,10 +56,20 @@ pub fn invalid_check(
     );
 }
 
-pub fn fmt_hex(alloc:std.mem.Allocator, msg:[]u8) ![]u8 {
+pub fn fmt_hex(
+    alloc:std.mem.Allocator,
+    msg:[]u8,
+    opts:struct {
+        caps:bool = false,
+    }
+) ![]u8 {
     var res = try std.ArrayList(u8).initCapacity(alloc, 0);
     defer _ = res.deinit(alloc);
-    for (msg) |b|
-        try res.print(alloc, "{x}", .{b});
+    for (msg) |b| {
+        if (opts.caps)
+            try res.print(alloc, "{X}", .{b})
+        else
+            try res.print(alloc, "{x}", .{b});
+    }
     return res.toOwnedSlice(alloc);
 }
