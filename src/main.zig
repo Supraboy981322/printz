@@ -12,6 +12,7 @@ const FormatSpecifiers = enum {
     x,
     X,
     @" x",
+    @" X",
 };
 
 pub fn main() !void {
@@ -108,12 +109,12 @@ pub fn main() !void {
                     );
                     try res.appendSlice(alloc, args[a_no]);
                 },
-                .x, .X, .@" x" => {
+                .x, .X, .@" x", .@" X" => {
                     const formatted = try hlp.fmt_hex(
                         alloc, args[a_no],
                         .{
-                            .caps = specifier == .X,
-                            .space = specifier == .@" x",
+                            .caps = specifier == .X or specifier == .@" X",
+                            .space = specifier == .@" x" or specifier == .@" X",
                         }
                     );
                     defer alloc.free(formatted);
