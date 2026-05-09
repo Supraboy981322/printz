@@ -1,9 +1,7 @@
 const std = @import("std");
 const hlp = @import("helpers.zig");
 
-const stderr = &@constCast(&std.fs.File.stderr().writer(&.{})).interface;
-
-pub fn parse_octal(in:[]u8) u8 {
+pub fn parse_octal(in:[]u8, stderr:*std.Io.Writer) u8 {
     var v:usize = 0;
     for (in) |b| {
         defer if (v > std.math.maxInt(u8)) {
@@ -27,7 +25,7 @@ pub fn parse_octal(in:[]u8) u8 {
     return @intCast(v);
 }
 
-pub fn parse_hex(in:[]u8) u8 {
+pub fn parse_hex(in:[]u8, stderr:*std.Io.Writer) u8 {
     var v:u8 = 0;
     for (in) |b| {
         v *= 16;
@@ -47,7 +45,7 @@ pub fn parse_hex(in:[]u8) u8 {
     return v;
 }
 
-pub fn parse_unicode(i:*usize, in:[]u8, alloc:std.mem.Allocator) ![]u8 {
+pub fn parse_unicode(i:*usize, in:[]u8, alloc:std.mem.Allocator, stderr:*std.Io.Writer) ![]u8 {
     var j:usize = 0;
     defer i.* += j;
     while (j < in.len) : (j += 1)
@@ -73,7 +71,7 @@ pub fn parse_unicode(i:*usize, in:[]u8, alloc:std.mem.Allocator) ![]u8 {
     };
 }
 
-pub fn parse_num(pos:*usize, in:[]u8, null_on_invalid:?bool) ?u8 {
+pub fn parse_num(pos:*usize, in:[]u8, null_on_invalid:?bool, stderr:*std.Io.Writer) ?u8 {
     var i = pos.*;
 
     i -= 1;
@@ -92,13 +90,14 @@ pub fn parse_num(pos:*usize, in:[]u8, null_on_invalid:?bool) ?u8 {
 
     hlp.invalid_check(
         (v > std.math.maxInt(u8)), "base-10 number escape",
-        "{d} is too large to print (must fit with an unsigned 8-bit integer)", .{v}
+        "{d} is too large to print (must fit with an unsigned 8-bit integer)", .{v},
+        stderr,
     );
 
     return @intCast(v);
 }
 
-pub fn parse_literal(alloc:std.mem.Allocator, in:[]u8) ![]u8 {
+pub fn parse_literal(alloc:std.mem.Allocator, in:[]u8, stderr:*std.Io.Writer) ![]u8 {
     var arr = try std.ArrayList(u8).initCapacity(alloc, 0);
     defer _ = arr.deinit(alloc);
     var esc:bool = false;
@@ -122,27 +121,27 @@ pub fn parse_literal(alloc:std.mem.Allocator, in:[]u8) ![]u8 {
 
                 //\xXX for hex
                 'x', 'X' => block: {
-                    hlp.min_len(in[i..], 2);
+                    hlp.min_len(in[i..], 2, stderr);
                     defer i += 2;
-                    break :block parse_hex(in[i+1..i+3]);
+                    break :block parse_hex(in[i+1..i+3], stderr);
                 },
                 
                 //\0 should *ALWAYS* be a valid escape (in my opinion)
-                '0'...'9' => parse_num(&i, in, null).?,
+                '0'...'9' => parse_num(&i, in, null, stderr).?,
 
                 //\o for octal
                 'o', 'O' => block: {
                     defer i += 2;
                     i += 1;
-                    hlp.min_len(in[i..], 3);
-                    break :block parse_octal(in[i..i+3]);
+                    hlp.min_len(in[i..], 3, stderr);
+                    break :block parse_octal(in[i..i+3], stderr);
                 },
 
                 //\u{...} for unicode
                 'u', 'U' => {
                     if (b == 'U') in[i] = 'u';
                     i -= 1;
-                    const foo = try parse_unicode(&i, in[i..], alloc);
+                    const foo = try parse_unicode(&i, in[i..], alloc, stderr);
                     try arr.appendSlice(alloc, foo);
                     alloc.free(foo);
                     continue :loop;

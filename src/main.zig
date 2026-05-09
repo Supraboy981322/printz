@@ -2,33 +2,31 @@ const std = @import("std");
 const hlp = @import("helpers.zig");
 const parser = @import("parser.zig");
 
-const stdout = &@constCast(&std.fs.File.stdout().writer(&.{})).interface;
-const stderr = &@constCast(&std.fs.File.stderr().writer(&.{})).interface;
-
 const FormatSpecifiers = enum {
     s,
     d,
     c,
-    x,
-    X,
-    @" x",
-    @" X",
+    x, X, @" x", @" X",
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
+pub fn main(init:std.process.Init) !void {
+    const alloc = init.gpa;
+
+    var stdout_writer = std.Io.File.stdout().writer(init.io, &.{});
+    var stdout = &stdout_writer.interface;
+
+    var stderr_writer = std.Io.File.stderr().writer(init.io, &.{});
+    var stderr = &stderr_writer.interface;
 
     const args = b: {
-        const raw = try std.process.argsAlloc(alloc);
-        defer std.process.argsFree(alloc, raw);
+        var itr = try init.minimal.args.iterateAllocator(alloc);
+        defer itr.deinit();
 
         var res = try std.ArrayList([]u8).initCapacity(alloc, 0);
         defer _ = res.deinit(alloc);
 
-        for (raw) |a| try res.append(
-            alloc, try parser.parse_literal(alloc, a)
+        while (itr.next()) |a| try res.append(
+            alloc, try parser.parse_literal(alloc, std.mem.absorbSentinel(@constCast(a)), stderr)
         );
 
         break :b try res.toOwnedSlice(alloc);
@@ -41,7 +39,8 @@ pub fn main() !void {
 
     hlp.invalid_check(
         args.len < 2, "not enough args",
-        "need something to print", .{}
+        "need something to print", .{},
+        stderr,
     );
 
     var res = try std.ArrayList(u8).initCapacity(alloc, 0);
@@ -62,7 +61,8 @@ pub fn main() !void {
             mem[@intCast(i-1)] = b;
             hlp.invalid_check(
                 @as(usize, @intCast(i)) + 1 > mem_len, "format string",
-                "unknown specifier (truncated): {s}", .{mem[0..i]}
+                "unknown specifier (truncated): {s}", .{mem[0..i]},
+                stderr,
             );
             i += 1;
         } else {
@@ -70,14 +70,16 @@ pub fn main() !void {
             i -= 1;
             hlp.invalid_check(
                 (args[1..].len < a_no), "format specifiers",
-                "not enough args to populate all given specifiers", .{}
+                "not enough args to populate all given specifiers", .{},
+                stderr,
             );
             const specifier = std.meta.stringToEnum(
                 FormatSpecifiers, mem[0..i]
             ) orelse {
                 hlp.invalid_check(
                     true, "format string",
-                    "unknown specifier: {{{s}}}", .{mem[0..i]}
+                    "unknown specifier: {{{s}}}", .{mem[0..i]},
+                    stderr,
                 );
                 unreachable;
             };
@@ -85,8 +87,9 @@ pub fn main() !void {
                 .s => try res.appendSlice(alloc, args[a_no]),
                 .c => {
                     hlp.invalid_check(
-                        (args[a_no].len > 1 and !hlp.str_is_num(args[a_no])), "format string",
-                        "more than one byte (can't use {{c}}): {s}", .{args[a_no]}
+                        (args[a_no].len > 1 and !hlp.str_is_num(args[a_no], stderr)), "format string",
+                        "more than one byte (can't use {{c}}): {s}", .{args[a_no]},
+                        stderr,
                     );
                     var char:u8 = undefined;
                     if (args[a_no].len == 1) {
@@ -103,9 +106,10 @@ pub fn main() !void {
                 },
                 .d => {
                     hlp.invalid_check(
-                        (!hlp.str_is_num(args[a_no]) and args[a_no].len > 1), "format string",
+                        (!hlp.str_is_num(args[a_no], stderr) and args[a_no].len > 1), "format string",
                         "specified number, but provided arg isn't a number: {s}",
-                        .{ args[a_no] }
+                        .{ args[a_no] },
+                        stderr,
                     );
                     try res.appendSlice(alloc, args[a_no]);
                 },
