@@ -7,6 +7,7 @@ const FormatSpecifiers = enum {
     d,
     c,
     x, X, @" x", @" X",
+    @" d",
 };
 
 pub fn main(init:std.process.Init) !void {
@@ -113,6 +114,11 @@ pub fn main(init:std.process.Init) !void {
                         try res.appendSlice(alloc, args[a_no])
                     else
                         try res.print(alloc, "{d}", .{args[a_no][0]});
+                },
+                .@" d" => {
+                    for (args[a_no]) |byte|
+                        try res.print(alloc, "{d} ", .{byte});
+                    _ = res.pop();
                 },
                 .x, .X, .@" x", .@" X" => {
                     const formatted = try hlp.fmt_hex(
