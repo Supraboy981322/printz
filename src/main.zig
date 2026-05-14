@@ -4,10 +4,10 @@ const Parser = @import("parser.zig");
 
 const FormatSpecifiers = enum {
     s,
-    d,
+    d, @" d",
     c,
     x, X, @" x", @" X",
-    @" d",
+    e, E,
 };
 
 pub fn main(init:std.process.Init) !void {
@@ -130,6 +130,13 @@ pub fn main(init:std.process.Init) !void {
                     );
                     defer alloc.free(formatted);
                     try res.appendSlice(alloc, formatted);
+                },
+                inline .e, .E => |s| {
+                    const unescaped = try parser.unescape(
+                        alloc, args[a_no], .{ .capital = s == .E }
+                    );
+                    defer alloc.free(unescaped);
+                    try res.appendSlice(alloc, unescaped);
                 },
             }
             a_no += 1;

@@ -169,3 +169,31 @@ pub fn parse_literal(self:*Parser, alloc:std.mem.Allocator, in:[]u8) ![]u8 {
     }
     return try arr.toOwnedSlice(alloc);
 }
+
+pub fn unescape(
+    _:*Parser,
+    alloc:std.mem.Allocator,
+    str:[]u8,
+    comptime opts:struct{
+        capital:bool = false
+    }
+) ![]u8 {
+    var wr:std.Io.Writer.Allocating = .init(alloc);
+    defer wr.deinit();
+    for (str) |b| try wr.writer.writeAll(
+        switch (b) {
+            '\n' => "\\" ++ if (opts.capital) "N" else "n", //newline
+            '\r' => "\\" ++ if (opts.capital) "R" else "r", //carrage return
+            '\t' => "\\" ++ if (opts.capital) "T" else "t", //tab
+
+            '\x1b' => "\\" ++ if (opts.capital) "E" else "e", //escape character
+            '\x07' => "\\" ++ if (opts.capital) "A" else "a", //bell character
+            '\x08' => "\\" ++ if (opts.capital) "B" else "b", //backspace
+            '\x0c' => "\\" ++ if (opts.capital) "F" else "f", //formfeed
+            '\x0b' => "\\" ++ if (opts.capital) "V" else "v", //vertical tab
+
+            else => @constCast(&[_]u8{b}),
+        }
+    );
+    return try wr.toOwnedSlice();
+}
