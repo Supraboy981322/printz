@@ -109,7 +109,10 @@ pub fn main(init:std.process.Init) !void {
                         "specified number, but provided arg isn't a number: {s}",
                         .{ args[a_no] },
                     );
-                    try res.appendSlice(alloc, args[a_no]);
+                    if (hlp.str_is_num(args[a_no]))
+                        try res.appendSlice(alloc, args[a_no])
+                    else
+                        try res.print(alloc, "{d}", .{args[a_no][0]});
                 },
                 .x, .X, .@" x", .@" X" => {
                     const formatted = try hlp.fmt_hex(
