@@ -31,7 +31,9 @@ pub fn main(init:std.process.Init) !void {
         defer _ = res.deinit(alloc);
 
         while (itr.next()) |a| try res.append(
-            alloc, try parser.parse_literal(alloc, std.mem.absorbSentinel(@constCast(a))[0..a.len])
+            alloc, try parser.parse_literal(
+                alloc, std.mem.absorbSentinel(@constCast(a))[0..a.len]
+            )
         );
 
         break :b try res.toOwnedSlice(alloc);

@@ -197,7 +197,9 @@ pub fn unescape(
                     @constCast(&[_]u8{b})
                 else {
                     try wr.writer.writeAll("\\x");
-                    const escaped = try std.fmt.allocPrint(alloc, "{" ++ (if (opts.capital) "X" else "x") ++ "}", .{b});
+                    const escaped = try std.fmt.allocPrint(
+                        alloc, "{" ++ (if (opts.capital) "X" else "x") ++ "}", .{b}
+                    );
                     defer alloc.free(escaped);
                     if (escaped.len == 1)
                         try wr.writer.writeAll("0");
