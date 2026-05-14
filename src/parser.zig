@@ -192,7 +192,18 @@ pub fn unescape(
             '\x0c' => "\\" ++ if (opts.capital) "F" else "f", //formfeed
             '\x0b' => "\\" ++ if (opts.capital) "V" else "v", //vertical tab
 
-            else => @constCast(&[_]u8{b}),
+            else =>
+                if ((b <= '~' and b >= ' ') or std.ascii.isWhitespace(b))
+                    @constCast(&[_]u8{b})
+                else {
+                    try wr.writer.writeAll("\\x");
+                    const escaped = try std.fmt.allocPrint(alloc, "{" ++ (if (opts.capital) "X" else "x") ++ "}", .{b});
+                    defer alloc.free(escaped);
+                    if (escaped.len == 1)
+                        try wr.writer.writeAll("0");
+                    try wr.writer.writeAll(escaped);
+                    continue;
+                },
         }
     );
     return try wr.toOwnedSlice();
