@@ -42,6 +42,7 @@ pub fn min_len(self:*Hlp, str:[]u8, len:usize) void {
             \\  expected {d} valid characters, but found {d}
             ++ "\n", .{len, str.len}
         ) catch {};
+        self.stderr.flush() catch {};
         std.process.exit(1);
     }
 }
@@ -54,6 +55,7 @@ pub fn err_if_not(
 ) void {
     if (!condition) {
         self.stderr.print(msg ++ "\n", fmt) catch {};
+        self.stderr.flush() catch {};
         std.process.exit(1);
     }
 }

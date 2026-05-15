@@ -13,10 +13,12 @@ const FormatSpecifiers = enum {
 pub fn main(init:std.process.Init) !void {
     const alloc = init.gpa;
 
-    var stdout_writer = std.Io.File.stdout().writer(init.io, &.{});
+    var stdout_buf:[100]u8 = undefined;
+    var stdout_writer = std.Io.File.stdout().writer(init.io, &stdout_buf);
     var stdout = &stdout_writer.interface;
 
-    var stderr_writer = std.Io.File.stderr().writer(init.io, &.{});
+    var stderr_buf:[100]u8 = undefined;
+    var stderr_writer = std.Io.File.stderr().writer(init.io, &stderr_buf);
     var stderr = &stderr_writer.interface;
 
     var hlp:Hlp = .init(stderr, undefined);
@@ -121,6 +123,7 @@ pub fn main(init:std.process.Init) !void {
                     } else
                         char = std.fmt.parseInt(u8, args[a_no], 10) catch |e| {
                             try stderr.print("{t}: |{s}|", .{e, args[a_no]});
+                            stderr.flush() catch {};
                             std.process.abort();
                             unreachable;
                         };
@@ -175,5 +178,13 @@ pub fn main(init:std.process.Init) !void {
         try res.append(alloc, b);
     }
 
-    stdout.print("{s}", .{res.items}) catch {};
+    if (i != 0)
+        hlp.invalid_check(
+            true, "format string",
+            "un-terminated format specifier: |{s}|",
+            .{if (i == 1) "[empty]" else mem[0..i-1]}
+        );
+
+    stdout.writeAll(res.items) catch {};
+    stdout.flush() catch {};
 }
