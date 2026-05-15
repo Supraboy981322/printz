@@ -58,17 +58,18 @@ pub fn main(init:std.process.Init) !void {
     const mem_len = comptime std.math.maxInt(@TypeOf(i));
     var mem:[mem_len]u8 = undefined;
     var a_no:usize = 2;
+
     var reader:std.Io.Reader = .fixed(args[1]);
     while (reader.takeByte() catch null) |b| {
         if (b == '{') {
-            if (i > 0) if (i == 1) {
+            if (i == 1) {
                 try res.append(alloc, b);
                 i = 0;
                 continue;
-            } else
-                hlp.invalid_check(true, "format string",
-                    "un-terminated specifier: {s}", .{mem[0..i]},
-                );
+            }
+            hlp.invalid_check(i > 0, "format string",
+                "un-terminated specifier: {s}", .{mem[0..i]},
+            );
             i = 1;
             continue;
         }
@@ -76,8 +77,9 @@ pub fn main(init:std.process.Init) !void {
         if (b == '}') {
             hlp.invalid_check(i == 0, "format string",
                 "missplaced '}}'; use '}}}}' for literal brace", .{}
-            ); 
+            );
         }
+
         if (i > 0) {
             if (b != '}') {
                 mem[@intCast(i-1)] = b;
