@@ -5,7 +5,7 @@ const Parser = @import("parser.zig");
 const FormatSpecifiers = enum {
     s,
     d, @" d",
-    c,
+    c, @" c",
     x, X, @" x", @" X",
     e, E,
 };
@@ -117,9 +117,10 @@ pub fn main(init:std.process.Init) !void {
                     else
                         try res.print(alloc, "{d}", .{args[a_no][0]});
                 },
-                .@" d" => {
+                inline .@" d", .@" c" => |s| {
+                    const fmt = @tagName(s)[1..];
                     for (args[a_no]) |byte|
-                        try res.print(alloc, "{d} ", .{byte});
+                        try res.print(alloc, "{" ++ fmt ++ "} ", .{byte});
                     _ = res.pop();
                 },
                 inline .x, .X, .@" x", .@" X" => |s| {
