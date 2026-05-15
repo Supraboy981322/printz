@@ -8,6 +8,7 @@ const FormatSpecifiers = enum {
     c, @" c",
     x, X, @" x", @" X",
     e, E,
+    q,
 };
 
 pub fn main(init:std.process.Init) !void {
@@ -184,7 +185,7 @@ pub fn do_specifier(
             const formatted = try hlp.fmt_hex(
                 alloc, arg,
                 .{
-                    .caps = s == .X or s == .@" X",
+                    .caps = comptime s == .X or s == .@" X",
                     .space = comptime std.mem.count(u8, @tagName(s), " ") > 0,
                 }
             );
@@ -194,11 +195,18 @@ pub fn do_specifier(
 
         inline .e, .E => |s| {
             const unescaped = try parser.unescape(
-                alloc, arg, .{ .capital = s == .E }
+                alloc, arg, .{ .capital = comptime s == .E }
             );
             defer alloc.free(unescaped);
             try res.appendSlice(alloc, unescaped);
         },
 
+        .q => {
+            const quoted = try parser.quote(
+                alloc, arg, .{}
+            );
+            defer alloc.free(quoted);
+            try res.appendSlice(alloc, quoted);
+        }
     }
 }

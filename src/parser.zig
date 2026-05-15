@@ -210,3 +210,27 @@ pub fn unescape(
     );
     return try wr.toOwnedSlice();
 }
+
+pub fn quote(
+    self:*Parser,
+    alloc:std.mem.Allocator,
+    str:[]u8,
+    comptime opts:struct {
+        capital:bool = false,
+    }
+) ![]u8 {
+    _ = opts;
+    var wr:std.Io.Writer.Allocating = .init(alloc);
+    defer wr.deinit();
+    for (str) |b| {
+        const c:[]u8 = @constCast(switch (b) {
+            '"' => "\\\"",
+            '\\' => "\\\\",
+            else => &[_]u8{b},
+        });
+        const unescaped = try self.unescape(alloc, c, .{});
+        defer alloc.free(unescaped);
+        try wr.writer.writeAll(unescaped);
+    }
+    return try wr.toOwnedSlice();
+}
