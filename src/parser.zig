@@ -167,6 +167,7 @@ pub fn parse_literal(self:*Parser, alloc:std.mem.Allocator, in:[]u8) ![]u8 {
             else => try arr.append(alloc, b),
         }
     }
+    if (esc) try arr.append(alloc, '\\');
     return try arr.toOwnedSlice(alloc);
 }
 
