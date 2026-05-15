@@ -122,12 +122,12 @@ pub fn main(init:std.process.Init) !void {
                         try res.print(alloc, "{d} ", .{byte});
                     _ = res.pop();
                 },
-                .x, .X, .@" x", .@" X" => {
+                inline .x, .X, .@" x", .@" X" => |s| {
                     const formatted = try hlp.fmt_hex(
                         alloc, args[a_no],
                         .{
-                            .caps = specifier == .X or specifier == .@" X",
-                            .space = specifier == .@" x" or specifier == .@" X",
+                            .caps = s == .X or s == .@" X",
+                            .space = comptime std.mem.count(u8, @tagName(s), " ") > 0,
                         }
                     );
                     defer alloc.free(formatted);
